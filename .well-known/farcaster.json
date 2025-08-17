@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "frame": {
+    "version": "1",
+    "name": "FlipToEarn",
+    "iconUrl": "https://flip-to-earn-ten.vercel.app/icon.png",
+    "homeUrl": "https://flip-to-earn-ten.vercel.app/",
+    "imageUrl": "https://flip-to-earn-ten.vercel.app/image.png",
+    "buttonTitle": "Spin to Earn",
+    "splashImageUrl": "https://flip-to-earn-ten.vercel.app/splash.png",
+    "splashBackgroundColor": "#111111",
+    "webhookUrl": ""
+  }
+}

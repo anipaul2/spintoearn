@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=390, initial-scale=1.0" />
+  <title>Spin to Earn</title>
+
+  <!-- Farcaster Mini App Metadata -->
+  <meta name="fc:miniapp" content='{
+    "version":"1",
+    "imageUrl":"https://flip-to-earn.vercel.app/image.png",
+    "button":{
+      "title":"Spin to Earn",
+      "action":{
+        "type":"launch_frame",
+        "name":"Spin to Earn",
+        "url":"https://flip-to-earn.vercel.app",
+        "splashImageUrl":"https://flip-to-earn.vercel.app/splash.png",
+        "splashBackgroundColor":"#111111"
+      }
+    }
+  }' />
+
+  <style>
+    body{margin:0;background:#111;color:#fff;font-family:Inter,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;max-width:390px;margin-inline:auto}
+    .tabbar{display:flex;gap:8px;width:100%;margin:12px}
+    .tabbar button{flex:1;padding:10px;background:#1a1a1a;border:1px solid #333;color:#aaa;border-radius:8px;font-weight:700;cursor:pointer}
+    .tabbar button.active{background:#ffd166;color:#000;border-color:#ffd166}
+    .hidden{display:none}
+
+    /* User Profile */
+    .user-profile{display:flex;align-items:center;gap:12px;padding:16px;background:#1a1a1a;border-radius:12px;margin:12px;width:calc(100% - 24px)}
+    .user-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#ffd166,#ff6b6b);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:#000}
+    .user-info h3{margin:0;font-size:16px;font-weight:700}
+    .user-info p{margin:4px 0 0;font-size:14px;color:#aaa}
+
+    /* Spin Wheel */
+    .wheel-container{position:relative;width:280px;height:280px;margin:20px auto}
+    .wheel{width:100%;height:100%;border-radius:50%;position:relative;transition:transform 4s cubic-bezier(0.25,0.46,0.45,0.94);overflow:hidden}
+    .wheel-segment{position:absolute;width:140px;height:140px;top:50%;left:50%;transform-origin:0 0;clip-path:polygon(0 0, 86.6% 50%, 0 100%);display:flex;align-items:center;justify-content:flex-start;padding-left:20px;font-weight:800;font-size:9px;color:#000;text-shadow:1px 1px 2px rgba(255,255,255,0.9)}
+    .wheel-segment:nth-child(1){background:#ff6b6b;transform:rotate(0deg)}
+    .wheel-segment:nth-child(2){background:#4ecdc4;transform:rotate(45deg)}
+    .wheel-segment:nth-child(3){background:#45b7d1;transform:rotate(90deg)}
+    .wheel-segment:nth-child(4){background:#96ceb4;transform:rotate(135deg)}
+    .wheel-segment:nth-child(5){background:#feca57;transform:rotate(180deg)}
+    .wheel-segment:nth-child(6){background:#ff9ff3;transform:rotate(225deg)}
+    .wheel-segment:nth-child(7){background:#54a0ff;transform:rotate(270deg)}
+    .wheel-segment:nth-child(8){background:#5f27cd;transform:rotate(315deg)}
+    .wheel-pointer{position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-top:30px solid #ffd166;z-index:10}
+
+    .btn{padding:12px;background:#ffd166;color:#000;border:none;border-radius:10px;font-weight:800;width:90%;cursor:pointer;margin:8px auto}
+    .btn:disabled{background:#666;color:#ccc;cursor:not-allowed}
+
+    /* Leaderboard */
+    .leaderboard{width:100%;padding:0 12px}
+    .leaderboard h3{text-align:center;margin-bottom:16px}
+    .leaderboard-item{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#1a1a1a;border-radius:8px;margin-bottom:8px}
+    .leaderboard-left{display:flex;align-items:center;gap:12px}
+    .rank-icon{font-size:20px}
+    .leaderboard-info p{margin:0;font-size:14px}
+    .leaderboard-info p:first-child{font-weight:700}
+    .leaderboard-info p:last-child{color:#aaa;font-size:12px}
+    .leaderboard-badge{background:#ffd166;color:#000;padding:4px 8px;border-radius:4px;font-weight:700;font-size:12px}
+
+    /* Toast */
+    .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.12);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:10px 14px;font-weight:600;max-width:360px;width:calc(100% - 24px);box-shadow:0 8px 30px rgba(0,0,0,.5);display:none;z-index:9999}
+    .toast a{color:#ffd166;text-decoration:underline}
+    .toast.show{display:block;animation:fadeIn .25s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
+
+    /* Loading spinner */
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .spinner{width:20px;height:20px;border:2px solid rgba(0,0,0,.3);border-top:2px solid #000;border-radius:50%;animation:spin 1s linear infinite}
+  </style>
+</head>
+<body>
+
+  <div class="tabbar">
+    <button id="tabSpinBtn" class="active">Spin</button>
+    <button id="tabLbBtn">Leaderboard</button>
+  </div>
+
+  <!-- User Profile -->
+  <div class="user-profile">
+          <div class="user-avatar" id="userAvatar">SE</div>
+    <div class="user-info">
+      <h3 id="userName">Loading...</h3>
+            <p id="userAddress">FID: Loading...</p>
+      </div>
+    </div>
+
+  <!-- Spin Tab -->
+  <section id="spinTab">
+      <div class="wheel-container">
+          <div class="wheel-pointer"></div>
+      <div id="wheel" class="wheel">
+        <div class="wheel-segment">500 SE</div>
+        <div class="wheel-segment">2.5K anik</div>
+        <div class="wheel-segment">1K SE</div>
+        <div class="wheel-segment">5K anik</div>
+        <div class="wheel-segment">2.5K SE</div>
+        <div class="wheel-segment">12.5K anik</div>
+        <div class="wheel-segment">2X</div>
+        <div class="wheel-segment">5K SE</div>
+        </div>
+      </div>
+
+    <button id="spinBtn" class="btn">SPIN TO EARN</button>
+    <div id="spinResult" class="center" style="margin-top:8px;font-weight:700;text-align:center;"></div>
+    <button id="withdrawBtn" class="btn hidden" disabled>Withdraw $SE</button>
+    <button id="claimBtn" class="btn hidden" disabled>Claim $0xanik</button>
+    <button id="withdrawBaseBtn" class="btn hidden" disabled>Withdraw $0xanik</button>
+  </section>
+
+  <!-- Leaderboard Tab -->
+  <section id="leaderboardTab" class="hidden">
+      <div class="leaderboard">
+      <h3>🏆 Top 10 Players (Total Spins)</h3>
+      <div id="leaderboardBody">Loading...</div>
+        </div>
+  </section>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Farcaster + wagmi -->
+  <script type="module">
+    import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
+    import {
+      createConfig, connect, switchChain, writeContract, readContract, watchContractEvent, getAccount, http
+    } from 'https://esm.sh/@wagmi/core';
+    import { arbitrum, base } from 'https://esm.sh/@wagmi/core/chains';
+    import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
+
+    // Initialize Farcaster SDK
+    await sdk.actions.ready({ disableNativeGestures: true });
+
+    /* ---------- UI refs ---------- */
+    const spinTab = document.getElementById('spinTab');
+    const leaderboardTab = document.getElementById('leaderboardTab');
+    document.getElementById('tabSpinBtn').onclick = () => {
+      spinTab.classList.remove('hidden');
+      leaderboardTab.classList.add('hidden');
+      document.getElementById('tabSpinBtn').classList.add('active');
+      document.getElementById('tabLbBtn').classList.remove('active');
+    };
+    document.getElementById('tabLbBtn').onclick = () => {
+      leaderboardTab.classList.remove('hidden');
+      spinTab.classList.add('hidden');
+      document.getElementById('tabLbBtn').classList.add('active');
+      document.getElementById('tabSpinBtn').classList.remove('active');
+      loadLeaderboard();
+    };
+
+    const wheel = document.getElementById('wheel');
+        const spinBtn = document.getElementById('spinBtn');
+        const withdrawBtn = document.getElementById('withdrawBtn');
+        const claimBtn = document.getElementById('claimBtn');
+        const withdrawBaseBtn = document.getElementById('withdrawBaseBtn');
+        const spinResult = document.getElementById('spinResult');
+        const toastEl = document.getElementById('toast');
+
+    function showToast(html, ms=3500){ toastEl.innerHTML=html; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'), ms); }
+
+        /* ---------- Load contract JSONs ---------- */
+    async function loadJson(path){ const r = await fetch(path); if(!r.ok) throw new Error(`Failed to load ${path}`); return r.json(); }
+    const arbJson = await loadJson('/arbitrumGame.json');   // { address, abi }
+    const baseJson = await loadJson('/baseClaim.json');     // { address, abi }
+
+        const ARB_ADDR = arbJson.address, ARB_ABI = arbJson.abi;
+        const BASE_ADDR = baseJson.address, BASE_ABI = baseJson.abi;
+
+        /* ---------- wagmi config ---------- */
+    const config = createConfig({
+      chains: [arbitrum, base],
+      transports: { [arbitrum.id]: http(), [base.id]: http() }
+    });
+    await connect(config, { connector: farcasterMiniApp() }).catch(()=>{});
+
+    // current user (to filter events for *their* spins)
+    let userAddress = getAccount(config)?.address;
+
+    /* ---------- Get Farcaster user data ---------- */
+    try {
+      const user = await sdk.context.user();
+      if (user && (user.username || user.displayName || user.fid)) {
+        const username = user.username || user.displayName || 'user';
+        const fid = user.fid || 'Unknown';
+        const pfpUrl = user.pfpUrl;
+        
+        document.getElementById('userName').textContent = `@${username}`;
+        document.getElementById('userAddress').textContent = `FID: ${fid}`;
+        
+        const userAvatar = document.getElementById('userAvatar');
+        if (pfpUrl) {
+          userAvatar.innerHTML = `<img src="${pfpUrl}" alt="User avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+              } else {
+          userAvatar.textContent = String(username).slice(0, 2).toUpperCase();
+        }
+      } else {
+        // Fallback to wallet address
+        if (userAddress) {
+          const shortAddr = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+          document.getElementById('userName').textContent = `@spinner`;
+          document.getElementById('userAddress').textContent = shortAddr;
+          document.getElementById('userAvatar').textContent = 'SP';
+        } else {
+          document.getElementById('userName').textContent = '@demo_user';
+          document.getElementById('userAddress').textContent = 'FID: 12345';
+          document.getElementById('userAvatar').textContent = 'DU';
+        }
+      }
+    } catch (error) {
+      console.log('Could not get Farcaster user data:', error);
+      // Fallback to wallet address
+      if (userAddress) {
+        const shortAddr = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+        document.getElementById('userName').textContent = `@spinner`;
+        document.getElementById('userAddress').textContent = shortAddr;
+        document.getElementById('userAvatar').textContent = 'SP';
+        } else {
+        document.getElementById('userName').textContent = '@demo_user';
+        document.getElementById('userAddress').textContent = 'FID: 12345';
+        document.getElementById('userAvatar').textContent = 'DU';
+      }
+        }
+
+        /* ---------- Wheel rotation helpers ---------- */
+    let currentRot = 0; // track cumulative rotation in degrees
+
+    // light spin while waiting (keeps UI lively)
+    let waitSpinTimer = null;
+        function startWaitingSpin() {
+      stopWaitingSpin();
+          waitSpinTimer = setInterval(() => {
+        wheel.style.transition = 'transform .6s linear';
+        currentRot += 90; // quarter-turn bumps
+        wheel.style.transform = `rotate(${currentRot}deg)`;
+          }, 650);
+        }
+        function stopWaitingSpin() {
+          if (waitSpinTimer) clearInterval(waitSpinTimer);
+          waitSpinTimer = null;
+        }
+
+        function spinToResult(segment) {
+          stopWaitingSpin();
+      // final target: segment * 45 degrees (8 segments)
+      const target = segment * 45;
+      const spins = 8; // add full spins for flair
+      const mod = ((currentRot % 360) + 360) % 360;
+      const delta = ((target - mod) + 360) % 360;
+      const finalRot = currentRot + spins * 360 + delta;
+      wheel.style.transition = 'transform 4s cubic-bezier(.2,.7,.2,1)';
+      wheel.style.transform = `rotate(${finalRot}deg)`;
+          currentRot = finalRot;
+    }
+
+    /* ---------- Event listeners ---------- */
+    // ArbitrumWin = $SE tokens won
+    watchContractEvent(config, {
+      address: ARB_ADDR, abi: ARB_ABI, eventName: 'ArbitrumWin',
+      args: userAddress ? { player: userAddress } : undefined,
+      onLogs: logs => {
+        for (const log of logs) {
+          const segment = log.args?.segment?.toString?.() ?? '0';
+          const amount = log.args?.amount?.toString?.() ?? '0';
+          const segmentNum = Number(segment);
+          
+          spinToResult(segmentNum);
+          spinResult.textContent = `Won ${amount} $SE`;
+          showToast(`🎯 Won ${amount} $SE on Arbitrum!`);
+          withdrawBtn.classList.remove('hidden');
+          withdrawBtn.disabled = false;
+        }
+      }
+    });
+
+    // BaseWin = $0xanik tokens won (store the segment for claiming)
+    let lastBaseWinSegment = 0;
+    watchContractEvent(config, {
+      address: ARB_ADDR, abi: ARB_ABI, eventName: 'BaseWin',
+      args: userAddress ? { player: userAddress } : undefined,
+      onLogs: logs => {
+        for (const log of logs) {
+          const segment = log.args?.segment?.toString?.() ?? '0';
+          const amount = log.args?.amount?.toString?.() ?? '0';
+          const segmentNum = Number(segment);
+          lastBaseWinSegment = segmentNum; // Store for claiming
+          
+          spinToResult(segmentNum);
+          spinResult.textContent = `Won ${amount} $0xanik`;
+          showToast(`🎯 Won ${amount} $0xanik on Base!`);
+          claimBtn.classList.remove('hidden');
+          claimBtn.disabled = false;
+        }
+      }
+    });
+
+    // BonusActivated = 2X multiplier won
+    watchContractEvent(config, {
+      address: ARB_ADDR, abi: ARB_ABI, eventName: 'BonusActivated',
+      args: userAddress ? { player: userAddress } : undefined,
+      onLogs: logs => {
+        for (const log of logs) {
+          spinToResult(6); // Segment 6 is the multiplier
+          spinResult.textContent = `Got 2X Multiplier!`;
+          showToast(`🔥 2X Multiplier activated!`);
+        }
+      }
+    });
+
+    /* ---------- Actions ---------- */
+    // Spin (always Arbitrum)
+        spinBtn.addEventListener('click', async () => {
+      // reset UI
+              spinResult.textContent = 'Spinning…';
+      withdrawBtn.classList.add('hidden');
+      claimBtn.classList.add('hidden');
+      withdrawBaseBtn.classList.add('hidden');
+      withdrawBtn.disabled = true;
+      claimBtn.disabled = true;
+      withdrawBaseBtn.disabled = true;
+
+      // kick off a quick initial spin and then a gentle waiting spin until event lands
+      wheel.style.transition = 'transform .8s ease-in';
+      currentRot += 540; // 1.5 spins to start
+      wheel.style.transform = `rotate(${currentRot}deg)`;
+      // begin periodic bump while we wait for the event
+      setTimeout(startWaitingSpin, 820);
+
+      try {
+        await switchChain(config, { chainId: arbitrum.id }).catch(()=>{});
+        const txHash = await writeContract(config, {
+          address: ARB_ADDR, abi: ARB_ABI, functionName: 'spin', args: []
+        });
+        showToast(`⏳ Spin sent. <a target="_blank" href="https://arbiscan.io/tx/${txHash}">view</a>`, 5000);
+
+        // safety timeout: if no event within 25s, stop spinner and show fallback
+        setTimeout(() => { 
+          if (waitSpinTimer) { 
+            stopWaitingSpin(); 
+            spinResult.textContent = 'Spin completed - check transaction'; 
+            showToast('🤔 Still waiting for result…'); 
+          } 
+        }, 25000);
+      } catch (e) {
+        stopWaitingSpin();
+        showToast('❌ Spin failed.');
+        spinResult.textContent = 'Spin failed or rejected.';
+      }
+    });
+
+    // Withdraw $SE (Arbitrum)
+    withdrawBtn.addEventListener('click', async () => {
+      try {
+        await switchChain(config, { chainId: arbitrum.id });
+        const txHash = await writeContract(config, {
+          address: ARB_ADDR, abi: ARB_ABI, functionName: 'withdraw', args: []
+        });
+        showToast(`🎉 Withdrawn! <a target="_blank" href="https://arbiscan.io/tx/${txHash}">view</a>`, 4500);
+        withdrawBtn.classList.add('hidden');
+        withdrawBtn.disabled = true;
+      } catch (e) {
+        showToast('❌ Withdrawal failed.');
+      }
+    });
+
+    // Claim $0xanik (Base) - adds to pending withdrawals
+    claimBtn.addEventListener('click', async () => {
+      try {
+        await switchChain(config, { chainId: base.id });
+        const txHash = await writeContract(config, {
+          address: BASE_ADDR, abi: BASE_ABI, functionName: 'claimBaseReward', args: [lastBaseWinSegment]
+        });
+        showToast(`🎉 Claimed! Now withdraw. <a target="_blank" href="https://basescan.org/tx/${txHash}">view</a>`, 4500);
+        claimBtn.classList.add('hidden');
+        claimBtn.disabled = true;
+        withdrawBaseBtn.classList.remove('hidden');
+        withdrawBaseBtn.disabled = false;
+      } catch (e) {
+        showToast('❌ Claim failed.');
+      }
+    });
+
+    // Withdraw $0xanik (Base) - actual token transfer
+    withdrawBaseBtn.addEventListener('click', async () => {
+      try {
+        await switchChain(config, { chainId: base.id });
+        const txHash = await writeContract(config, {
+          address: BASE_ADDR, abi: BASE_ABI, functionName: 'withdraw', args: []
+        });
+        showToast(`🎉 $0xanik withdrawn! <a target="_blank" href="https://basescan.org/tx/${txHash}">view</a>`, 4500);
+        withdrawBaseBtn.classList.add('hidden');
+        withdrawBaseBtn.disabled = true;
+      } catch (e) {
+        showToast('❌ Withdrawal failed.');
+      }
+    });
+
+    /* ---------- Leaderboard (Arbitrum) ---------- */
+        async function loadLeaderboard() {
+          const tbody = document.getElementById('leaderboardBody');
+      tbody.innerHTML = '<div style="text-align:center;color:#aaa;">Loading…</div>';
+      try {
+        // Ensure we're on Arbitrum for leaderboard
+        await switchChain(config, { chainId: arbitrum.id }).catch(() => {});
+        
+        const result = await readContract(config, {
+          address: ARB_ADDR, abi: ARB_ABI, functionName: 'getTopPlayers', args: [10n]
+        });
+        
+        const players = result[0] || [];
+        const counts = result[1] || [];
+        
+        tbody.innerHTML = '';
+        players.forEach((addr, i) => {
+          const spins = counts[i]?.toString?.() ?? '0';
+          const shortAddr = addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : '—';
+                    const rankIcon = i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+                    
+          const item = document.createElement('div');
+          item.className = 'leaderboard-item';
+          item.innerHTML = `
+                        <div class="leaderboard-left">
+                          <div class="rank-icon">${rankIcon}</div>
+                          <div class="leaderboard-info">
+                <p title="${addr}">@spinner${i+1}</p>
+                            <p>${shortAddr}</p>
+                          </div>
+                        </div>
+                        <div class="leaderboard-badge">${spins}</div>
+          `;
+          tbody.appendChild(item);
+        });
+        
+        if (players.length === 0) {
+          tbody.innerHTML = '<div style="text-align:center;color:#aaa;">No spins yet.</div>';
+        }
+        
+      } catch (e) {
+        console.error('Leaderboard error:', e);
+        tbody.innerHTML = '<div style="text-align:center;color:#aaa;">Failed to load leaderboard.</div>';
+      }
+    }
+        
+        // Load leaderboard
+        loadLeaderboard();
+  </script>
+</body>
+</html>
