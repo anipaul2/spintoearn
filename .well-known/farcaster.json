@@ -1,8 +1,8 @@
 {
-  "accountAssociation": {
-    "header": "",
-    "payload": "",
-    "signature": ""
+ "accountAssociation": {
+    "header": "eyJmaWQiOjE1MTA0LCJ0eXBlIjoiY3VzdG9keSIsImtleSI6IjB4Y2E3ODViNUUwRjYzMzA3YTM0OTExRkI0NDZiNDM5Njc1MWM4ZjcyOCJ9",
+    "payload": "eyJkb21haW4iOiJzcGludG9lYXJuLnZlcmNlbC5hcHAifQ",
+    "signature": "MHg0NDA4MmJiZDk5Nzk4ZTNiZDMyZDEzYTlhNjllMjUxOWYyMTZmMzNmNjU0YTNkMTBkOGNlNDQzY2MzYTE5NmQwNmIwNWJjYzI0ZjNkZGI2ZDgzZTIyZTc3YmE5NzE3YWRhOTNmZGZmYjRiZjE4Mzc0YThkN2QwYTM5NjBjMGY1MTFj"
   },
   "frame": {
     "version": "1",
@@ -13,6 +13,6 @@
     "buttonTitle": "Spin to Earn",
     "splashImageUrl": "https://spintoearn.vercel.app/splash.png",
     "splashBackgroundColor": "#111111",
-    "webhookUrl": ""
+    "webhookUrl": "https://spintoearn.vercel.app/api/webhook"
   }
 }
